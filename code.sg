@@ -1,0 +1,62 @@
+function bulkPdfByAngga() {
+  var formURL = "https://docs.google.com/forms/u/0/d/e/change-this-full-url-with-your-link/formResponse";
+  var wrkBk = SpreadsheetApp.getActiveSpreadsheet();
+  var wrkSht = wrkBk.getSheetByName("Your Sheet Name for Bulk");
+  
+  var noOfRows = wrkBk.getLastRow();
+  
+  for (i=2;i<=noOfRows;i++)
+  {     
+  var nama = wrkSht.getRange("A" + i).getValue();
+  var kelas = wrkSht.getRange("B" + i).getValue();
+  var email = wrkSht.getRange("C" + i).getValue();
+  var kode = wrkSht.getRange("D" + i).getValue();
+  
+  //field id name, inspect your google form and search name id
+  var datamap = 
+  {"entry.youridname":nama,
+  "entry.youridfield": kelas,
+  "entry.youdidemail": email,
+  "entry.youridkode": kode };
+  
+  var options = {
+    "method" : "post",
+    "payload" : datamap
+  };
+    
+  UrlFetchApp.fetch(formURL, options);
+    
+  }
+}
+
+function afterFormSubmit(e) {
+  const info = e.namedValues;
+  const pdfFile = createPDF(info);
+  const entryRow = e.range.getRow();
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Your Result Sheet Name").getRange(entryRow, 6).setValue(pdfFile.getUrl());
+
+}
+
+function createPDF(info) {
+  
+  const pdfFolder = DriveApp.getFolderById("your id pdf folder");
+  const tempFolder = DriveApp.getFolderById("your id temp folder");
+  const templateDoc = DriveApp.getFileById("temp doc id");
+  
+  const newTempFile = templateDoc.makeCopy(tempFolder);
+  
+  const openDoc = DocumentApp.openById(newTempFile.getId());
+  const body = openDoc.getBody();
+  body.replaceText("{namasiswa}", info['Nama Siswa'][0]);
+  body.replaceText("{namakelas}", info['Nama Kelas'][0]);
+  body.replaceText("{email}", info['Email'][0]);
+  body.replaceText("{kodesertifikat}", info['Kode Sertifikat'][0]);
+  openDoc.saveAndClose();
+  
+  
+  const blobPDF = newTempFile.getAs(MimeType.PDF);
+  const pdfFile = pdfFolder.createFile(blobPDF).setName(info['Nama Siswa'][0] + " " + info['Kode Sertifikat'][0] + " " + new Date());
+  tempFolder.removeFile(newTempFile);
+  
+  return pdfFile;
+}
